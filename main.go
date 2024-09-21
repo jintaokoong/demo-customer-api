@@ -50,6 +50,21 @@ func ConvertInt(s string) int {
 	return i
 }
 
+func cors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 func main() {
 	// initialize sqlite database connection
 	db, err := sql.Open("sqlite", "./database.db")
@@ -71,7 +86,7 @@ func main() {
 	})
 
 	// register the customer
-	mux.HandleFunc("POST /customers", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/customers", func(w http.ResponseWriter, r *http.Request) {
 		// receive the request in json body
 		var req CustomerDetails
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -102,7 +117,7 @@ func main() {
 	})
 
 	// update the customer
-	mux.HandleFunc("PUT /customers/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/customers/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id_str := r.PathValue("id")
 		if id_str == "" {
 			http.Error(w, "Invalid id", http.StatusBadRequest)
@@ -141,7 +156,7 @@ func main() {
 	})
 
 	// get customers
-	mux.HandleFunc("GET /customers/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/customers/{id}", func(w http.ResponseWriter, r *http.Request) {
 		// get the id from the url
 		id_str := r.PathValue("id")
 		if id_str == "" {
@@ -181,7 +196,7 @@ func main() {
 		w.Write(response_str)
 	})
 
-	mux.HandleFunc("GET /customers", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/customers", func(w http.ResponseWriter, r *http.Request) {
 		// get params for pagination
 		page := ConvertInt(r.URL.Query().Get("page"))
 		limit := ConvertInt(r.URL.Query().Get("limit"))
@@ -224,8 +239,11 @@ func main() {
 		w.Write(response_str)
 	})
 
+	// wrap the mux with cors middleware
+	server := cors(mux.ServeHTTP)
+
 	println("Server is running on port 3000")
-	http.ListenAndServe(":3000", mux)
+	http.ListenAndServe(":3000", server)
 }
 
 // #region Database
