@@ -155,6 +155,39 @@ func main() {
 		}
 	})
 
+	// delete the customer
+	mux.HandleFunc("DELETE /api/customers/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id_str := r.PathValue("id")
+		if id_str == "" {
+			http.Error(w, "Invalid id", http.StatusBadRequest)
+			return
+		}
+		id, err := strconv.ParseInt(id_str, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid id", http.StatusBadRequest)
+			return
+		}
+
+		_, err = get_customer(db, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		delete_record := `
+		DELETE FROM customers
+		WHERE id = ?;
+		`
+
+		_, err = db.Exec(delete_record, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
 	// get customers
 	mux.HandleFunc("GET /api/customers/{id}", func(w http.ResponseWriter, r *http.Request) {
 		// get the id from the url
