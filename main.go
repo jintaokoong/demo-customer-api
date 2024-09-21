@@ -28,7 +28,7 @@ type CustomerDetails struct {
 }
 
 type GetListingResponse struct {
-	Data       []Customer `json:"data"`
+	Records    []Customer `json:"records"`
 	TotalPages int        `json:"total_pages"`
 }
 
@@ -186,7 +186,7 @@ func main() {
 		page := ConvertInt(r.URL.Query().Get("page"))
 		limit := ConvertInt(r.URL.Query().Get("limit"))
 
-		if page == 0 {
+		if page <= 0 {
 			page = 1
 		}
 
@@ -206,10 +206,12 @@ func main() {
 			return
 		}
 
+		total_pages := (total_records + limit - 1) / limit
+
 		response := ApiResponse[GetListingResponse]{
 			Data: GetListingResponse{
-				Data:       result,
-				TotalPages: total_records / limit,
+				Records:    result,
+				TotalPages: total_pages,
 			},
 		}
 		response_str, err := json.Marshal(response)
